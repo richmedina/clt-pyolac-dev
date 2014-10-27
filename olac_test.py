@@ -5,7 +5,12 @@ import codecs
 # xmlfilepath = 'sample-olac-static-repo.xml'
 xmlfilepath = 'sample-olac-kaipuleohone.xml'
 mprefix = 'olac'
-namespaces = {'oai': 'http://www.openarchives.org/OAI/2.0/', 'olac': 'http://www.language-archives.org/OLAC/1.1/'}
+namespaces = {
+	'oai': 'http://www.openarchives.org/OAI/2.0/', 
+	'olac': 'http://www.language-archives.org/OLAC/1.1/',
+	'dcterms': 'http://purl.org/dc/terms/',
+	'dc': 'http://purl.org/dc/elements/1.1/',
+	}
 
 print 'xmlfilepath --> ', xmlfilepath
 print 'mprefix --> ', mprefix
@@ -20,31 +25,41 @@ xml = unicode(xml, 'UTF-8', 'replace')
 xml = xml.replace(chr(12), '?')
 xml = xml.encode('UTF-8')
 
-tree = etree.XML(xml)
-evaluator = etree.XPathEvaluator(tree, namespaces=namespaces)
-print 'NOTE --> tree and evaluator are defined'
+repository = etree.XML(xml) # Repository root element = 'Repository'
+evaluator = etree.XPathEvaluator(repository, namespaces=namespaces)
+
+repository_identify = evaluator("/*/*[local-name() = 'Identify']")
+repository_listmetadataformats = evaluator("/*/*[local-name() = 'ListMetadataFormats']")
+repository_listrecords = evaluator("/*/*[local-name() = 'ListRecords']")
+
+
 
 # NOTE: this grabs the record elements from tree:
-records = evaluator('//oai:record')
-print 'NOTE --> Records listed'
-# print list(records)
-r = records[0]
+# records = evaluator('//oai:record')
 
-print '---------HEADER---------\n'
-h = r[0]
-for e in h:
-	print '%s --> %s\n\t%s\n\n'% (e.tag, e.text, e.attrib)
 
-print '\n\n---------METADATA SINGLE---------\n'
-m = r[1][0]
-for e in m:
-	print '%s --> %s\n\t%s\n\n'% (e.tag, e.text, e.attrib)
 
-print '\n\n---------METADATA FULL---------\n'
-for r in records:
-	m = r[1][0]
-	for e in m:
-		print '%s --> %s\n----> %s'% (e.tag, e.text, e.attrib)
+# print '---------HEADER---------\n'
+# r = records[0]
+# h = r[0]
+# i = 0
+# for e in h:
+# 	print '%s - %s\n--> %s\n-->%s\n\n'% (i, e.tag, e.text, e.attrib)
+# 	i+=1
+
+# print '\n\n---------METADATA SINGLE---------\n'
+# r = records[267]
+# m = r[1][0]
+# for e in m:
+# 	print '%s\n--> %s\n-->%s\n\n'% (e.tag, e.text, e.attrib)
+
+# print '\n\n---------METADATA FULL---------\n'
+# i = 0
+# for r in records:
+# 	m = r[1][0]
+# 	for e in m:
+# 		print '%s - %s --> %s\n----> %s'% (i, e.tag, e.text, e.attrib)
+# 	i += 1	
 
 
 
