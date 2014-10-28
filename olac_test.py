@@ -12,6 +12,7 @@ namespaces = {
 	'dc': 'http://purl.org/dc/elements/1.1/',
 	'repository': 'http://www.openarchives.org/OAI/2.0/static-repository',
 	'olac-archive': 'http://www.language-archives.org/OLAC/1.1/olac-archive',
+    'oai-identifier': 'http://www.openarchives.org/OAI/2.0/oai-identifier',
 	}
 
 print 'xmlfilepath --> ', xmlfilepath
