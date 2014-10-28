@@ -10,6 +10,8 @@ namespaces = {
 	'olac': 'http://www.language-archives.org/OLAC/1.1/',
 	'dcterms': 'http://purl.org/dc/terms/',
 	'dc': 'http://purl.org/dc/elements/1.1/',
+	'repository': 'http://www.openarchives.org/OAI/2.0/static-repository',
+	'olac-archive': 'http://www.language-archives.org/OLAC/1.1/olac-archive',
 	}
 
 print 'xmlfilepath --> ', xmlfilepath
@@ -27,10 +29,9 @@ xml = xml.encode('UTF-8')
 
 repository = etree.XML(xml) # Repository root element = 'Repository'
 evaluator = etree.XPathEvaluator(repository, namespaces=namespaces)
-
-repository_identify = evaluator("/*/*[local-name() = 'Identify']")
-repository_listmetadataformats = evaluator("/*/*[local-name() = 'ListMetadataFormats']")
-repository_listrecords = evaluator("/*/*[local-name() = 'ListRecords']")
+identify = evaluator('//repository:Identify')
+listmetadataformats = evaluator('//repository:ListMetadataFormats')
+listrecords = evaluator('//repository:ListRecords')
 
 
 
