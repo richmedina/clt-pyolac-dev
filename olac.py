@@ -88,7 +88,7 @@ class OLACClient(object):
                 if fieldname == 'participant':
                     p = '%s (%s) %s'% (i.get('name'), i.get('role'), i.get('email'))
                     datalist.append(p)
-                elif fieldname == 'olac-archive':
+                elif fieldname == 'datestamp':
                     datalist.append(i.get('currentAsOf'))
                 else:
                     datalist.append(i.text)
