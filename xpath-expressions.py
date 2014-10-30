@@ -2,6 +2,7 @@
 
 # Identify
 evaluator('//repository:repositoryName')
+evaluator('//repository:baseURL')
 evaluator('//olac-archive:archiveURL')
 evaluator('//olac-archive:participant')
 evaluator('//olac-archive:institution')
@@ -11,6 +12,7 @@ evaluator('//olac-archive:location')
 evaluator('//olac-archive:synopsis')
 evaluator('//olac-archive:access')
 evaluator('//olac-archive:archivalSubmissionPolicy')
+evaluator('//olac-archive:olac-archive')[0].get('currenAsOf')
 
 # ListMetadataFormats
 
@@ -24,6 +26,16 @@ hdr = record_evaluator('./oai:header') # get the header node
 meta_wrapper = record_evaluator('./oai:metadata') # not needed see next expression
 meta_olac = record_evaluator('.//olac:olac') # olac metadata is nested in <olac> node so we can use the // to go direct.
 
+
+
+# Metadata types specified by OLAC:
+# olac-discourse-type
+# olac-language
+# olac-linguistic-field
+# olac-linguistic-type
+# olac-role
+
+# Note data catagories are defined with dcterms:DCMIType
 
 
 

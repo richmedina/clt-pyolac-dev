@@ -1,9 +1,11 @@
 from lxml import etree
 import codecs
+import urllib2
+
 
 # 'http://www.language-archives.org/OLAC/1.1/static-repository.xml'
-# xmlfilepath = 'sample-olac-static-repo.xml'
-xmlfilepath = 'sample-olac-kaipuleohone.xml'
+xmlfilepath = 'http://www.language-archives.org/OLAC/1.1/static-repository.xml' # sample-olac-static-repo.xml
+# xmlfilepath = 'sample-olac-kaipuleohone.xml'
 mprefix = 'olac'
 namespaces = {
 	'oai': 'http://www.openarchives.org/OAI/2.0/', 
@@ -20,8 +22,12 @@ print 'mprefix --> ', mprefix
 print 'namespaces --> ', namespaces
 
 
-with codecs.open(xmlfilepath, 'r', 'utf-8') as xmlfile:
-    text = xmlfile.read()
+req = urllib2.Request(xmlfilepath)
+response = urllib2.urlopen(req)
+text = response.read()
+
+# with codecs.open(xmlfilepath, 'r', 'utf-8') as xmlfile:
+#     text = xmlfile.read()
 
 xml = text.encode('ascii', 'replace')
 xml = unicode(xml, 'UTF-8', 'replace')   	 

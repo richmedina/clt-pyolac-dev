@@ -1,10 +1,28 @@
 # OLACClient.py
 from lxml import etree
 from collections import namedtuple
-import codecs, json
+import codecs
+import json
+import urllib2
 
-OlacRecord = namedtuple('OlacRecord',['header', 'metadata'])
+OlacArchiveMetadataItem = namedtuple('OlacArchiveMetadataItem', ['fieldname', 'datalist'])
+OlacRecord = namedtuple('OlacRecord', ['header', 'metadata'])
 OlacMetadataItem = namedtuple('OlacMetadataItem', ['fieldname', 'data'])
+
+olac_archive_reader = {
+    'name': '//repository:repositoryName',
+    'base_url': '//repository:baseURL',
+    'archive_url': '//olac-archive:archiveURL',
+    'participant': '//olac-archive:participant',
+    'institution': '//olac-archive:institution',
+    'institution_url': '//olac-archive:institutionURL',
+    'short_location': '//olac-archive:shortLocation',
+    'location': '//olac-archive:location',
+    'synopsis': '//olac-archive:synopsis',
+    'access': '//olac-archive:access',
+    'submission_policy': '//olac-archive:archivalSubmissionPolicy',
+    'datestamp': '//olac-archive:olac-archive'
+}
 
 olac_dc_reader = {
     'identifier': './/dc:identifier',
@@ -21,7 +39,7 @@ olac_dc_reader = {
     'content': './/dc:content',
     'format': './/dc:format',
     'type': './/dc:type',
-    }
+}
 
 meta_type_map = {
     'olac:discourse-type': 'discourse-type',
@@ -35,7 +53,7 @@ meta_type_map = {
 }
 
 namespaces = {
-    'oai': 'http://www.openarchives.org/OAI/2.0/', 
+    'oai': 'http://www.openarchives.org/OAI/2.0/',
     'olac': 'http://www.language-archives.org/OLAC/1.1/',
     'dcterms': 'http://purl.org/dc/terms/',
     'dc': 'http://purl.org/dc/elements/1.1/',
@@ -45,7 +63,9 @@ namespaces = {
     'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
 }
 
+
 class OLACClient(object):
+
     """
     A loose implementation of client OAI protocol.
     Designed to parse and load an OLAC 'static repository' xml document.
@@ -60,8 +80,22 @@ class OLACClient(object):
 
     def identify(self):
         evaluator = etree.XPathEvaluator(self.root, namespaces=namespaces)
-        identify = evaluator('//repository:Identify')
-        return identify
+
+        repository_info = {}
+        for fieldname, xpath in olac_archive_reader.items():
+            datalist = []
+            for i in evaluator(xpath):
+                if fieldname == 'participant':
+                    p = '%s (%s) %s'% (i.get('name'), i.get('role'), i.get('email'))
+                    datalist.append(p)
+                elif fieldname == 'olac-archive':
+                    datalist.append(i.get('currentAsOf'))
+                else:
+                    datalist.append(i.text)
+
+            repository_info[fieldname] = datalist
+        
+        return repository_info
 
     def list_metatdata_formats(self):
         evaluator = etree.XPathEvaluator(self.root, namespaces=namespaces)
@@ -71,23 +105,32 @@ class OLACClient(object):
     def list_records(self):
         evaluator = etree.XPathEvaluator(self.root, namespaces=namespaces)
         records = evaluator('//oai:record')
-        
+
         record_list = []
         for record_node in records:
-            record_evaluator = etree.XPathEvaluator(record_node, namespaces=namespaces) # create evaluator from single record
-            header = self.build_header(record_evaluator('./oai:header')[0]) # get the header node
-            metadata = self.build_metadata(record_evaluator('.//olac:olac')[0]) # olac metadata is nested in <olac> node so we can use the // to go direct.
+            # create evaluator from single record
+            record_evaluator = etree.XPathEvaluator(
+                record_node, namespaces=namespaces)
+            
+            header = self.build_header(
+                record_evaluator('./oai:header')[0])  # get the header node
+            
+            # metadata items are nested in <olac> so we can use the // for direct access.
+            metadata = self.build_metadata(record_evaluator('.//olac:olac')[0])
             record_list.append(OlacRecord(header, metadata))
 
         return record_list
 
-
     def build_tree_root(self, xmlfilepath):
-        with codecs.open(xmlfilepath, 'r', 'utf-8') as xmlfile:
-            text = xmlfile.read()
+        # with codecs.open(xmlfilepath, 'r', 'utf-8') as xmlfile:
+        #     text = xmlfile.read()
 
+        request = urllib2.Request(xmlfilepath)
+        response = urllib2.urlopen(request)
+        text = response.read()
+        
         xml = text.encode('ascii', 'replace')
-        xml = unicode(xml, 'UTF-8', 'replace')       
+        xml = unicode(xml, 'UTF-8', 'replace')
         xml = xml.replace(chr(12), '?')
         xml = xml.encode('UTF-8')
         return etree.XML(xml)
@@ -97,12 +140,15 @@ class OLACClient(object):
         identifier = hdr_evaluator('.//oai:identifier')
         datestamp = hdr_evaluator('.//oai:datestamp')
         setspec = hdr_evaluator('.//oai:setSpec')
-        
+
         header = {}
-        try:            
-            header[self.strip_namespace_string(identifier[0].tag)] = identifier[0].text
-            header[self.strip_namespace_string(datestamp[0].tag)] = datestamp[0].text
-            header[self.strip_namespace_string(setspec[0].tag)] = setspec[0].text
+        try:
+            header[self.strip_namespace_string(identifier[0].tag)] = identifier[
+                0].text
+            header[self.strip_namespace_string(datestamp[0].tag)] = datestamp[
+                0].text
+            header[self.strip_namespace_string(setspec[0].tag)] = setspec[
+                0].text
         except:
             pass
 
@@ -110,46 +156,49 @@ class OLACClient(object):
 
     def build_metadata(self, element):
         print '\n-------------------------------\n'
-        meta_evaluator = etree.XPathEvaluator(element, namespaces=namespaces) # Get the metadata tree
+        meta_evaluator = etree.XPathEvaluator(
+            element, namespaces=namespaces)  # Get the metadata tree
         metadata = []
-        for fieldname, xpath in olac_dc_reader.items(): 
-            for e in meta_evaluator(xpath): # Process each metadata child element matching xpath    
+        for fieldname, xpath in olac_dc_reader.items():
+            # Process each metadata child element matching xpath
+            for e in meta_evaluator(xpath):
                 metadata.append(self.build_olac_metadata(e))
-            
+
         return metadata
 
     def build_olac_metadata(self, element):
         tag = self.strip_namespace_string(element.tag)
         text = element.text
 
-        dctype = element.get('{http://www.w3.org/2001/XMLSchema-instance}type') or ''
-        olaccode = element.get('{http://www.language-archives.org/OLAC/1.1/}code') or ''
-        # attributes = {}        
+        dctype = element.get(
+            '{http://www.w3.org/2001/XMLSchema-instance}type') or ''
+        olaccode = element.get(
+            '{http://www.language-archives.org/OLAC/1.1/}code') or ''
+        # attributes = {}
         # for key, value in element.attrib.items():
-        #     attributes[self.strip_namespace_string(key)] = value            
-        
-        
+        #     attributes[self.strip_namespace_string(key)] = value
+
         try:
             tag = '%s.%s' % (tag, meta_type_map[dctype])
             # Add code as value for element or append to tag when node text exists.
-            # Not sure if this is standard but if text does not exist, the element will have no value.
-            if not text:                
+            # Not sure if this is standard but if text does not exist, the
+            # element will have no value.
+            if not text:
                 text = olaccode
             else:
-                tag = '%s.%s' % (tag, olaccode)                  
+                tag = '%s.%s' % (tag, olaccode)
         except:
             pass
 
         return OlacMetadataItem(tag, text)
 
-
     def tostring(self, record):
         print '\n-------HEADER-------'
-        for i,j in record.header.items():
-            print '%s --> %s'% (i,j)
+        for i, j in record.header.items():
+            print '%s --> %s' % (i, j)
         print '-------METADATA-------'
         for item in record.metadata:
-            print '%s:\t%s'%(item.fieldname, item.data)
+            print '%s:\t%s' % (item.fieldname, item.data)
         return None
 
     def strip_namespace_string(self, ns_str):
@@ -159,10 +208,8 @@ class OLACClient(object):
                 ns_str = s[1:].split('}')[1]
         except:
             pass
-        
+
         return ns_str
 
 # metadata dictionary sample:
 # {tag: (text, attrib)}
-
-
